@@ -3,6 +3,7 @@ const code = @import("code.zig");
 const vm = @import("vm.zig");
 
 var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+const InterpretResult = vm.InterpretResult;
 
 
 pub fn main() anyerror!void {
@@ -12,10 +13,49 @@ pub fn main() anyerror!void {
     var c = code.Chunk.init(&gpa.allocator);
     defer c.deinit();
 
-    const x = try c.addConstant(1.2);
-    try c.writeOp(code.OpCode.Constant, 123);
-    try c.write(x, 123);
-    try c.writeOp(code.OpCode.Return, 125);
-    
-    const r = executor.interpret(&c);
+    const args = try std.process.argsAlloc(&gpa.allocator);
+    defer std.process.argsFree(&gpa.allocator, args);
+
+    switch(args.len){
+        1 => try repl(),
+        2 => runfile(args[1]),
+        else => {
+            std.debug.print("Usage: clox path\n", .{});
+            std.process.exit(64);
+        }
+    }
+
+}
+
+fn repl() !void {
+    const stderr = std.io.getStdErr().writer();
+    const stdin = std.io.getStdIn();
+
+    var buffer: [256]u8 = undefined;
+
+    while(true) {
+        try stderr.print("> ", .{});
+        const inputSize = try stdin.read(&buffer);
+        const source = buffer[0..inputSize];
+        interpret(source);
+    }
+}
+
+fn runfile(path: []const u8) void {
+    const source = readfile(path);
+    const result = interpret(source);
+
+    switch(result) {
+        InterpretResult.CompileError => std.process.exit(65),
+        InterpretResult.RuntimeError => std.process.exit(70),
+        InterpretResult.Ok => {}
+    }
+}
+
+fn readfile(path: []const u8) []const u8 {
+
+}
+
+fn interpret(source: []const u8) InterpretResult {
+
 }

@@ -6,6 +6,11 @@ var gpa = std.heap.GeneralPurposeAllocator(.{}){};
 
 pub const OpCode = enum(u8) {
     Constant,
+    Add,
+    Subtract,
+    Multiply,
+    Divide,
+    Negate,
     Return
 };
 
@@ -65,6 +70,11 @@ pub const Chunk = struct {
 
         switch(instruction) {
             OpCode.Constant => return constantInstruction("OP_CONSTANT", self, offset),
+            OpCode.Add => return simpleInstruction("OP_ADD", offset),
+            OpCode.Subtract => return simpleInstruction("OP_SUBTRACT", offset),
+            OpCode.Multiply => return simpleInstruction("OP_MULTIPLY", offset),
+            OpCode.Divide => return simpleInstruction("OP_DIVIDE", offset),
+            OpCode.Negate => return simpleInstruction("OP_NEGATE", offset),
             OpCode.Return => return simpleInstruction("OP_RETURN", offset)
         }
     }
@@ -73,7 +83,7 @@ pub const Chunk = struct {
 };
 
 fn simpleInstruction(name: []const u8, offset: usize) usize {
-    std.debug.print("{s} ", .{name});
+    std.debug.print("{s} \n", .{name});
     return offset + 1;
 }
 

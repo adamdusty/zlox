@@ -3,7 +3,6 @@ const code = @import("code.zig");
 const value = @import("value.zig");
 const debug = @import("debug.zig");
 
-
 const Stack = @import("stack.zig").Stack;
 const Allocator = std.mem.Allocator;
 const Chunk = code.Chunk;
@@ -11,9 +10,7 @@ const OpCode = code.OpCode;
 const Value = value.Value;
 
 pub const InterpretResult = enum {
-    Ok,
-    CompileError,
-    RuntimeError
+    Ok, CompileError, RuntimeError
 };
 
 pub const VirtualMachine = struct {
@@ -21,19 +18,16 @@ pub const VirtualMachine = struct {
     instruction: *u8,
     callStack: Stack(Value),
 
-
     pub fn init(allocator: *Allocator) !VirtualMachine {
         var stack = try Stack(Value).init(allocator, 256);
-        return VirtualMachine {
+        return VirtualMachine{
             .chunk = null,
             .instruction = undefined,
-            .callStack = stack
+            .callStack = stack,
         };
     }
 
-    pub fn deinit(self: *VirtualMachine) void {
-
-    }
+    pub fn deinit(self: *VirtualMachine) void {}
 
     pub fn interpret(self: *VirtualMachine, c: *Chunk) InterpretResult {
         self.chunk = c;
@@ -42,10 +36,10 @@ pub const VirtualMachine = struct {
     }
 
     pub fn run(self: *VirtualMachine) InterpretResult {
-        while(true) {
-            if(debug.TRACE_EXECUTION){
-                std.debug.print("          ", .{});
-                for(self.callStack.items) |val| {
+        while (true) {
+            if (debug.TRACE_EXECUTION) {
+                std.debug.print("{s:>10}", .{""});
+                for (self.callStack.items) |val| {
                     std.debug.print("[ {d} ]", .{val});
                 }
                 std.debug.print("\n", .{});
@@ -56,7 +50,22 @@ pub const VirtualMachine = struct {
             const instruction = self.readByte();
             const opCode = @intToEnum(OpCode, instruction);
 
-            switch (opCode){
+            switch (opCode) {
+                OpCode.Add => {
+                    self.binaryOp(add);
+                },
+                OpCode.Subtract => {
+                    self.binaryOp(sub);
+                },
+                OpCode.Multiply => {
+                    self.binaryOp(mul);
+                },
+                OpCode.Divide => {
+                    self.binaryOp(div);
+                },
+                OpCode.Negate => {
+                    self.callStack.push(-self.callStack.pop());
+                },
                 OpCode.Return => {
                     const val = self.callStack.pop();
                     std.debug.print("{d}", .{val});
@@ -66,7 +75,7 @@ pub const VirtualMachine = struct {
                     const constant = self.readByte();
                     const val = self.chunk.?.constants.items[constant];
                     self.callStack.push(val);
-                }
+                },
             }
         }
     }
@@ -77,7 +86,25 @@ pub const VirtualMachine = struct {
         return byte;
     }
 
-    // pub fn readConstant(self: *VirtualMachine) Value {
-
-    // }
+    pub fn binaryOp(self: *VirtualMachine, comptime op: anytype) void {
+        const rhs = self.callStack.pop();
+        const lhs = self.callStack.pop();
+        self.callStack.push(op(lhs, rhs));
+    }
 };
+
+fn add(lhs: Value, rhs: Value) Value {
+    return lhs + rhs;
+}
+
+fn sub(lhs: Value, rhs: Value) Value {
+    return lhs - rhs;
+}
+
+fn mul(lhs: Value, rhs: Value) Value {
+    return lhs * rhs;
+}
+
+fn div(lhs: Value, rhs: Value) Value {
+    return lhs / rhs;
+}
